@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: debian-kafka-demo
+  namespace: fasten
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      app: debian
+      component: kafka-demo-monster
+  template:
+    metadata:
+      labels:
+        app: debian
+        component: kafka-demo-monster
+    spec:
+      containers:
+      - name: kafka-demo
+        image: schaliasos/kafka-demo
+        securityContext:
+          privileged: true
+        args: ["fasten.debian.filtered.test", "fasten.debian.demo.test.1", "fasten.debian.demo_errors.test.1", "fasten.debian.demo_log.test.1", "samos:9092,delft:9092,goteborg:9092", "debian_group_1", "60"]
+        resources:
+          limits:
+            memory: "1Gi"
+        env:
+        - name: MY_POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: MY_POD_UID
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.uid
+      nodeSelector:
+        monster.node: "true"
