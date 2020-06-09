@@ -63,7 +63,8 @@ class KafkaPlugin(FastenPlugin):
             bootstrap_servers=self.bootstrap_servers.split(','),
             auto_offset_reset='earliest',
             enable_auto_commit=True,
-            max_poll_records=5,
+            max_poll_records=1,
+            max_poll_interval_ms=90000000,
             group_id=self.group_id,
             value_deserializer=lambda x: json.loads(x.decode('utf-8'))
         )
