@@ -59,6 +59,12 @@ class FastenPlugin(ABC):
         """
         self.logs.write(message + '\n')
 
+    def flush_logs(self):
+        """Flush logs
+        """
+        self.logs.flush()
+        self.errors.flush()
+
     @abstractmethod
     def name(self):
         """Returns a unique name for the plug-in.
