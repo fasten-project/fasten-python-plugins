@@ -23,10 +23,12 @@
 #
 import datetime
 import json
+from time import sleep
 from abc import abstractmethod
 from fasten.plugins.base import FastenPlugin
 from kafka import KafkaProducer
 from kafka import KafkaConsumer
+from kafka.errors import NoBrokersAvailable
 
 
 class KafkaPlugin(FastenPlugin):
@@ -134,3 +136,69 @@ class KafkaPlugin(FastenPlugin):
             self.log("{}: Consuming: {}".format(
                 str(datetime.datetime.now()), record))
             self.consume(record)
+
+
+class KafkaPluginNonBlocking(KafkaPlugin):
+
+    def __init__(self, bootstrap_servers):
+        """Override this method to set Kafka Topics, consumer, and group_id
+        """
+        super().__init__(bootstrap_servers)
+        self.consumer_timeout_ms = None
+        self.consumption_delay_sec = None
+
+    def set_consumer_timeout_ms(self, consumer_timeout_ms):
+        """Set consumer_timeout_ms
+        """
+        self.consumer_timeout_ms = consumer_timeout_ms
+
+    def set_consumption_delay_sec(self, consumption_delay_sec):
+        """Set consumption_delay_sec
+        """
+        self.consumption_delay_sec = consumption_delay_sec
+
+    def set_consumer(self):
+        """Set consumer to read (non-blocking) from consume_topic.
+        """
+        try:
+            assert self.consume_topic is not None
+            assert self.bootstrap_servers is not None
+            assert self.group_id is not None
+            assert self.consumer_timeout_ms is not None
+        except (AssertionError, NameError) as e:
+            self.err(("You should have set consume_topic, bootstrap_servers, "
+                      "group_id, and consumer_timeout_ms"))
+            raise e
+        self.consumer = KafkaConsumer(
+            self.consume_topic,
+            bootstrap_servers=self.bootstrap_servers.split(','),
+            auto_offset_reset='earliest',
+            enable_auto_commit=True,
+            max_poll_records=1,
+            group_id=self.group_id,
+            value_deserializer=lambda x: json.loads(x.decode('utf-8')),
+            consumer_timeout_ms=self.consumer_timeout_ms
+        )
+
+    def set_consumer_with_retry(self):
+        while True:
+            try:
+                self.set_consumer()
+                self.set_producer()
+            except NoBrokersAvailable:
+                self.err("Could not connect consumer to Kafka, re-trying...")
+            else:
+                self.log("Connected consumer to Kafka successfully.")
+                break
+            sleep(self.consumption_delay_sec)
+
+    def set_producer_with_retry(self):
+        while True:
+            try:
+                self.set_producer()
+            except NoBrokersAvailable:
+                self.err("Could not connect producer to Kafka, re-trying...")
+            else:
+                self.log("Connected producer to Kafka successfully.")
+                break
+            sleep(self.consumption_delay_sec)
