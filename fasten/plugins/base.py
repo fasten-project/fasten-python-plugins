@@ -34,7 +34,7 @@ class FastenPlugin(ABC):
 
     This abstract class provides:
 
-    * Methods for logging (err, log)
+    * Methods for logging (err, log, flush_logs)
     * Methods for declaring the metadata of a plug-in (name, description,
         version)
     * A helper method (free_resource) to free all the resources of a plug-in

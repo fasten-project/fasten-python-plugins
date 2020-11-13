@@ -137,6 +137,32 @@ class KafkaPlugin(FastenPlugin):
                 str(datetime.datetime.now()), record))
             self.consume(record)
 
+    def skip_messages(self):
+        """Skip kafka messages
+        """
+        try:
+            assert self.consumer is not None
+        except (AssertionError, NameError) as e:
+            self.err(("Consumer needs to be set before messages it can be "
+                      "consumed."))
+            raise e
+        for _ in self.consumer:
+            self.consumer.commit()
+
+    def free_resource(self):
+        """Free consumer and producer resources
+        """
+        try:
+            if self.consumer is not None:
+                self.consumer.close()
+            if self.producer is not None:
+                self.producer.close()
+        except BaseException as e:
+            self.err('Fatal exception while freeing resources: ' + str(e))
+            raise e
+        else:
+            self.log('Resources freed successfully.')
+
 
 class KafkaPluginNonBlocking(KafkaPlugin):
 
